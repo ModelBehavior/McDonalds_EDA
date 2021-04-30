@@ -1,0 +1,152 @@
+---
+title: "EDA Project 2 Mcdonalds"
+author: Ra'Shawn Howard
+output: html_notebook
+---
+```{r setup,include=FALSE,echo=FALSE}
+library(ggthemes)
+library(tidyverse)
+install.packages("flexdashboard")
+```
+
+```{r load-data,include=FALSE,echo=FALSE}
+menue <- read_csv("https://storage.googleapis.com/kagglesdsdata/datasets/910/1662/menu.csv?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=gcp-kaggle-com%40kaggle-161607.iam.gserviceaccount.com%2F20210429%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20210429T064643Z&X-Goog-Expires=259199&X-Goog-SignedHeaders=host&X-Goog-Signature=84c4df1a43f4421d45d0f71a86970d0eb6e54b9285e4e0b966aeef4d919e0e9555747c991e480b7240f8664f659f0cdb6fd1a16a5cf6bc599088f91209a6c2d0b2803ca3d74448a4caefd00066f47d3a7f696793245459023f89156575c365bad821f2426aeacf21d7226e7d09a772a4ddc5eed625a9e05386774a83da028d63d400c1b8135aaca238f3b98e1b6bb24af7399d5fe920b4edb7295c96dc5215c4f7ffcceb007f157623f9d092510f28d0c5fe24c9cfc307df5ca116522e80fd7c44a10e21a4ca91accb607e057e378999ffc817cc06edb51840bd4a5d0ed8a390e48f4c3335bb28093aa1c3686fb37e57bf405cd8980b95dbd9d07c2849aebee7")
+head(menue)
+
+menue %>% 
+  janitor::clean_names() # add _ for column names with spaces
+
+str(menue)
+summary(menue)
+```
+
+# How many calories does the average McDonald's value meal contain?
+```{r plot1,include=FALSE}
+total_mean <- round(mean(menue$Calories),2)
+
+plot1 <- menue %>% 
+  group_by(Category) %>% 
+  summarise(avg_calories=round(mean(Calories),2)) %>% 
+  ggplot(aes(fct_reorder(Category,avg_calories),avg_calories)) +
+  geom_col(fill="darkblue") +
+  geom_hline(yintercept = total_mean,linetype="dashed",color="darkred") +
+  geom_text(aes(label=avg_calories), hjust = 1,color="white") +
+  geom_text(aes(1, total_mean, label=str_c("Menu Average = ", as.character(total_mean)), 
+                 hjust = -0.0005),color ="darkred") +
+  coord_flip() +
+  labs(y="Average Calories",
+       x="Category",
+       title = "Average Calories in Each Category",
+       subtitle = "How do Calories differ by Category?") +
+  theme_hc()
+  #theme(axis.title = element_text())
+```
+
+# How much do beverages, like soda or coffee, contribute to the overall caloric intake?
+```{r plot2, include=FALSE}
+total_cal <- sum(menue$Calories)
+plot2 <- menue %>% 
+  filter(Calories>0) %>% 
+  select(Category,Calories) %>% 
+  group_by(Category) %>% 
+  summarise(prop_cal=sum(Calories)/total_cal*100) %>% 
+  ggplot(aes(fct_reorder(Category,prop_cal),prop_cal)) +
+  geom_col(fill="black") +
+  coord_flip() +
+  geom_text(aes(label = paste0(round(prop_cal), "%"),y=prop_cal),hjust=1,color="White") +
+  theme_hc() +
+  labs(x="",
+       y="Proportion",
+       title = "Proportion of Calories in each Category")
+```
+
+# Does ordering grilled chicken instead of crispy increase a sandwich's nutritional value?
+```{r plot3, include=FALSE}
+menue %>% 
+  filter(Category=="Chicken & Fish",
+         Item!="Filet-O-Fish",
+         Item!="Chicken McNuggets (4 piece)",
+         Item!="Chicken McNuggets (6 piece)",
+         Item!="Chicken McNuggets (10 piece)",
+         Item!="Chicken McNuggets (20 piece)",
+         Item!="Chicken McNuggets (40 piece)") %>% 
+  mutate(type = case_when(str_detect(Item, "Grilled") == 1 ~ "Grilled",
+                        TRUE ~ "Crispy"),
+       type = as.factor(type)) %>% 
+  select(Category,Item, Calories,Protein,`Total Fat (% Daily Value)`,type) -> sandwhich_menue
+
+# T test for different measures
+sandwhich_menue %>% 
+  rstatix::t_test(Calories~type) -> test_calories
+
+sandwhich_menue %>% 
+  rstatix::t_test(Protein~type) -> test_protein
+
+sandwhich_menue %>% 
+  rstatix::t_test(`Total Fat (% Daily Value)`~type) -> test_Fat
+
+test_calories
+test_protein
+test_Fat
+
+# Plot1 Grilled vs Crispy Chicken \nCalories Comparison
+plot3 <- sandwhich_menue %>% 
+  ggplot(aes(type,Calories,fill=type)) +
+  geom_boxplot() +
+  geom_jitter() +
+  coord_flip() +
+  theme_hc() +
+  labs(x="",
+       title = "Grilled vs Crispy Chicken \nCalories Comparison",
+       subtitle =rstatix::get_test_label(test_calories,detailed = TRUE)) +
+  theme(legend.position = "none") +
+  scale_fill_brewer(palette = "Dark2")
+  
+# Plot2 
+sandwhich_menue %>% 
+  ggplot(aes(Protein,type,fill=type)) +
+  geom_boxplot() +
+  geom_jitter() +
+  theme_hc() +
+  labs(y="",
+       title = "Grilled vs Crispy Chicken \nProtein Comparison",
+       subtitle = rstatix::get_test_label(test_protein,detailed = TRUE)) +
+   scale_fill_brewer(palette = "Dark2") +
+  theme(legend.position = "none")
+  
+
+sandwhich_menue %>% 
+  ggplot(aes(`Total Fat (% Daily Value)`,type,fill=type)) +
+  geom_boxplot() +
+  geom_jitter() +
+  theme_hc() +
+  labs(y="",
+       x="Total Fat",
+       title = "Grilled vs Crispy Chicken \nTotal Fat Comparison",
+       subtitle = rstatix::get_test_label(test_Fat,detailed = TRUE)) +
+  theme(legend.position = "none")
+
+sandwhich_menue %>% 
+  t_test(Protein~type,order = c("Grilled","Crispy"))
+
+sandwhich_menue %>% 
+  janitor::clean_names() %>% 
+  t_test(total_fat_percent_daily_value ~ type, order = c("Grilled","Crispy"))
+
+# Residual plots for t_test(s)
+# plot(lm(Calories~type,data=sandwhich_menue))
+# plot(lm(Protein~type,data=sandwhich_menue))
+# plot(lm(`Total Fat (% Daily Value)`~type,data=sandwhich_menue))
+```
+
+```{r merge-plots,fig.height=4}
+ggpubr::ggarrange(plot1,plot2,plot3)
+
+ggpubr::ggarrange(
+  plot3,                # First row with line plot
+  # Second row with box and dot plots
+  ggpubr::ggarrange(plot1, plot2, ncol = 2, labels = c("B", "C")), 
+  nrow = 2, 
+  labels = "A"       # Label of the line plot
+  ) 
+```
