@@ -11,7 +11,7 @@ Group data by category to get summarizations for graphics and reorder levels to 
 - Since there is no difference in calories between crispy and grilled chicken on average, we are worried about protein and total fat. From the t-tests, we can see grilled chicken has more protein on average and less total fat, so we can conclude that grilled chicken increases a sandwich's nutritional value.
 ### Results:
 
-![](/images/project2_image)
+![](https://github.com/ModelBehavior/Shawn_Portfolio/blob/main/images/project2_image)
 
 ### Limitations and Next Steps:
 The graphs can be improved using shiny to make an interactive dashboard, which can boost the interpretability of the findings to interested parties.
