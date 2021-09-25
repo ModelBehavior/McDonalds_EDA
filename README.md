@@ -1,4 +1,3 @@
-# [Project 2: Whats on The Dollar Menu?](https://github.com/ModelBehavior/McDonalds_EDA)
 ## Exploratory Data Analysis on McDonald's Data.
 ### Questions:
 - How many calories does the average McDonald's value meal contain?
